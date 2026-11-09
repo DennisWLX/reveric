@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
-if [ "$(uname -s)" != Darwin ] || [ "$(uname -m)" != arm64 ]; then
-  echo 'This CPU runtime build targets macOS arm64.' >&2
+depth_arch=$(uname -m)
+if [ "$(uname -s)" != Darwin ] || { [ "$depth_arch" != arm64 ] && [ "$depth_arch" != x86_64 ]; }; then
+  echo 'This CPU runtime build requires macOS arm64 or x86_64.' >&2
   exit 2
 fi
 depth_root=$(cd "$(dirname "$0")/../.." && pwd)
 depth_work="$depth_root/build/depth-native"
 depth_reduced="$depth_work/ort-reduced-1.31.0"
+if [ "$depth_arch" = x86_64 ]; then depth_reduced="$depth_reduced-x86_64"; fi
 depth_source="$depth_reduced/source"
 mkdir -p "$depth_reduced"
 if [ ! -d "$depth_source/.git" ]; then
@@ -33,6 +35,6 @@ fi
   --include_ops_by_config "$depth_reduced/required_operators.config" \
   --skip_submodule_sync --skip_tests --compile_no_warning_as_error \
   --cmake_generator Ninja \
-  --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=arm64 CMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+  --cmake_extra_defines "CMAKE_OSX_ARCHITECTURES=$depth_arch" CMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
   FETCHCONTENT_TRY_FIND_PACKAGE_MODE=NEVER CMAKE_POLICY_VERSION_MINIMUM=3.5 \
   onnxruntime_BUILD_UNIT_TESTS=OFF

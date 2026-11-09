@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Prepare embedded frameworks for arm64 and verify macOS package architectures."""
+"""Prepare embedded frameworks and verify the requested macOS architecture."""
 
+import argparse
 from pathlib import Path
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
 
 
-def verify(app: Path, prepare=False):
+def verify(app: Path, prepare=False, architecture="arm64"):
+    if architecture not in ("arm64", "x86_64"):
+        raise SystemExit(f"Unsupported macOS architecture: {architecture}")
     if not (app / "Contents/MacOS").is_dir():
         raise SystemExit(f"Not a macOS app bundle: {app}")
     # Mach-O and universal headers, in both byte orders.
@@ -37,13 +39,13 @@ def verify(app: Path, prepare=False):
         architectures = subprocess.check_output(
             ["lipo", "-archs", str(binary)], text=True,
         ).split()
-        if prepare and architectures != ["arm64"] and binary.is_relative_to(frameworks):
-            if "arm64" not in architectures:
-                raise SystemExit(f"Framework has no arm64 slice: {binary}")
-            with tempfile.TemporaryDirectory(prefix=".arm64-", dir=binary.parent) as temp:
+        if prepare and architectures != [architecture] and binary.is_relative_to(frameworks):
+            if architecture not in architectures:
+                raise SystemExit(f"Framework has no {architecture} slice: {binary}")
+            with tempfile.TemporaryDirectory(prefix=f".{architecture}-", dir=binary.parent) as temp:
                 thin = Path(temp) / binary.name
                 subprocess.run([
-                    "lipo", str(binary), "-thin", "arm64", "-output", str(thin),
+                    "lipo", str(binary), "-thin", architecture, "-output", str(thin),
                 ], check=True)
                 shutil.copystat(binary, thin)
                 thin.replace(binary)
@@ -55,8 +57,8 @@ def verify(app: Path, prepare=False):
             architectures = subprocess.check_output(
                 ["lipo", "-archs", str(binary)], text=True,
             ).split()
-        if architectures != ["arm64"]:
-            raise SystemExit(f"Expected arm64, found {architectures}: {binary}")
+        if architectures != [architecture]:
+            raise SystemExit(f"Expected {architecture}, found {architectures}: {binary}")
         count += 1
     if not count:
         raise SystemExit(f"No native binaries found: {app}")
@@ -64,14 +66,14 @@ def verify(app: Path, prepare=False):
     # Xcode signs the enclosing app after its embed build phase completes.
     for framework in sorted(changed_frameworks, key=lambda p: len(p.parts), reverse=True):
         sign(framework)
-    print(f"Verified {count} arm64 native binaries: {app}")
+    print(f"Verified {count} {architecture} native binaries: {app}")
 
 
 if __name__ == "__main__":
-    args = sys.argv[1:]
-    prepare = bool(args and args[0] == "--prepare")
-    if prepare:
-        args = args[1:]
-    if len(args) != 1:
-        raise SystemExit("usage: architectures.py [--prepare] APP")
-    verify(Path(args[0]), prepare=prepare)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--prepare", action="store_true")
+    parser.add_argument("--arch", choices=("arm64", "x86_64"),
+                        default=os.environ.get("REVERIC_MACOS_ARCH", "arm64"))
+    parser.add_argument("app", type=Path)
+    args = parser.parse_args()
+    verify(args.app, prepare=args.prepare, architecture=args.arch)

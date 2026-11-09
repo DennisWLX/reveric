@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 depth_root=$(cd "$(dirname "$0")/../.." && pwd)
-depth_sdk="${DEPTH_ORT_ROOT:-$depth_root/build/depth-native/ort-reduced-1.31.0/dist}"
+depth_reduced="$depth_root/build/depth-native/ort-reduced-1.31.0"
+if [ "$(uname -m)" = x86_64 ]; then depth_reduced="$depth_reduced-x86_64"; fi
+depth_sdk="${DEPTH_ORT_ROOT:-$depth_reduced/dist}"
 if [ ! -f "$depth_sdk/lib/libonnxruntime.dylib" ]; then
   echo 'Depth SDK missing. Run bash third/depth-native/prepare-product-macos.sh before building.' >&2
   exit 1

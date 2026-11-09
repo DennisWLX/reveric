@@ -21,6 +21,15 @@ releases:
           target: zip
           build_args:
             release: true
+      - name: macos-intel-dmg
+        package:
+          platform: macos
+          channel: x86_64
+          hooks:
+            pre: 'python3 macos/architectures.py --arch x86_64 "$BUILD_OUTPUT_DIRECTORY/Reveric.app"'
+          target: dmg
+          build_args:
+            release: true
       - name: windows-exe
         package:
           platform: windows

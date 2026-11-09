@@ -14,4 +14,6 @@ fi
 printf '%s  %s\n' 1031b36dd3bdaa8d976a6130d9cf2a05e9be320b93ae804f8427b91dc3432afc "$depth_archive" | shasum -a 256 -c -
 tar -xzf "$depth_archive" -C "$depth_work"
 bash "$depth_root/third/depth-native/build-reduced-macos.sh"
-python3 "$depth_root/third/depth-native/package_reduced.py" "$depth_work"
+# The pinned arm64 SDK supplies architecture-independent headers and notices.
+# Only the runtime built from source above is included in the product.
+python3 "$depth_root/third/depth-native/package_reduced.py" "$depth_work" --arch "$(uname -m)"

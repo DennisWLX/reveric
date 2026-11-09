@@ -13,6 +13,5 @@ PRODUCT_BUNDLE_IDENTIFIER = ai.reveric
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.
 
-// Build and distribute the macOS app for Apple Silicon.
-ARCHS = arm64
-EXCLUDED_ARCHS = x86_64
+// Build for the host architecture; the Intel workflow uses an Intel runner.
+ARCHS = $(NATIVE_ARCH_ACTUAL)
